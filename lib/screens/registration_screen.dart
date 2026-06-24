@@ -119,8 +119,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       prefixIcon: Icon(Icons.mail_outline),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty)
+                      if (value == null || value.isEmpty) {
                         return 'Please enter your email';
+                      }
                       if (!value.contains('@')) return 'Enter a valid email';
                       return null;
                     },

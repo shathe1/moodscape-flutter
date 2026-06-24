@@ -44,7 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Icon(icon, size: 18, color: AppColors.primary),
           const SizedBox(width: 12),
           Expanded(child: Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textDark))),
-          Switch(value: value, onChanged: onChanged, activeColor: AppColors.primary),
+          Switch(value: value, onChanged: onChanged, activeThumbColor: AppColors.primary),
         ],
       ),
     );

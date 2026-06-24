@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../services/firestore_service.dart';
 import '../services/user_session.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/saved_places_service.dart';
 
 class DiscoverScreen extends StatefulWidget {
   final String initialMood;
@@ -31,7 +31,6 @@ class _Place {
 
 class _DiscoverScreenState extends State<DiscoverScreen> {
   late String _selectedMood;
-  final Map<int, String> _savedPlaceIds = {};
 
   final List<_Place> _places = [
     _Place(
@@ -61,24 +60,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   void initState() {
     super.initState();
     _selectedMood = widget.initialMood;
-    _loadSavedPlaces();
-  }
-
-  Future<void> _loadSavedPlaces() async {
-    final userId = UserSession.userId;
-    if (userId == null) return;
-    final snapshot = await FirebaseFirestore.instance
-        .collection('saved_places')
-        .where('userId', isEqualTo: userId)
-        .get();
-    if (!mounted) return;
-    setState(() {
-      for (final doc in snapshot.docs) {
-        final name = doc.data()['name'] as String?;
-        final index = _places.indexWhere((p) => p.name == name);
-        if (index != -1) _savedPlaceIds[index] = doc.id;
-      }
-    });
   }
 
   @override
@@ -102,28 +83,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (Navigator.canPop(context))
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Row(
-                        children: [
-                          Icon(
-                            Icons.arrow_back,
-                            color: Colors.white70,
-                            size: 16,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'Back',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
                   const SizedBox(height: 8),
                   Text(
                     'Feeling $_selectedMood',
@@ -145,25 +104,17 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               height: 44,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 children: ['All', 'Cafés', 'Outdoors', 'Nightlife'].map((tab) {
                   final bool active = tab == 'All';
                   return Container(
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
                       color: active ? AppColors.primary : Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: active
-                            ? AppColors.primary
-                            : AppColors.borderMedium,
+                        color: active ? AppColors.primary : AppColors.borderMedium,
                       ),
                     ),
                     alignment: Alignment.center,
@@ -185,7 +136,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 itemCount: _places.length,
                 itemBuilder: (context, index) {
                   final place = _places[index];
-                  final bool isSaved = _savedPlaceIds.containsKey(index);
+                  final bool isSaved =
+                      SavedPlacesService.instance.isSaved(place.name);
+
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
@@ -208,46 +161,30 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                                 ),
                               ),
                               alignment: Alignment.center,
-                              child: Text(
-                                place.emoji,
-                                style: const TextStyle(fontSize: 30),
-                              ),
+                              child: Text(place.emoji,
+                                  style: const TextStyle(fontSize: 30)),
                             ),
                             Positioned(
                               right: 10,
                               top: 8,
                               child: GestureDetector(
-                                onTap: () async {
-                                  final userId = UserSession.userId;
-                                  if (userId == null) return;
-                                  if (_savedPlaceIds.containsKey(index)) {
-                                    await FirestoreService.deletePlace(
-                                      _savedPlaceIds[index]!,
-                                      userId,
-                                    );
-                                    setState(
-                                      () => _savedPlaceIds.remove(index),
-                                    );
-                                  } else {
-                                    final docId =
-                                        await FirestoreService.savePlace(
-                                          userId: userId,
-                                          name: place.name,
-                                          emoji: place.emoji,
-                                          rating: place.rating,
-                                          distanceKm: place.distanceKm,
-                                          mood: _selectedMood,
-                                        );
-                                    setState(
-                                      () => _savedPlaceIds[index] = docId,
-                                    );
-                                  }
+                                onTap: () {
+                                  SavedPlacesService.instance.toggle(
+                                    SavedPlace(
+                                      name: place.name,
+                                      emoji: place.emoji,
+                                      thumbColor: place.color,
+                                      rating: place.rating,
+                                      distanceKm: place.distanceKm,
+                                      mood: _selectedMood,
+                                    ),
+                                  );
+                                  setState(() {});
                                 },
                                 child: CircleAvatar(
                                   radius: 14,
-                                  backgroundColor: Colors.white.withOpacity(
-                                    0.9,
-                                  ),
+                                  backgroundColor:
+                                      Colors.white.withValues(alpha: 0.9),
                                   child: Icon(
                                     isSaved
                                         ? Icons.favorite
@@ -265,44 +202,30 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                place.name,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textDark,
-                                ),
-                              ),
+                              Text(place.name,
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textDark)),
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Icon(
-                                    Icons.star,
-                                    size: 13,
-                                    color: Colors.amber[700],
-                                  ),
+                                  Icon(Icons.star,
+                                      size: 13, color: Colors.amber[700]),
                                   const SizedBox(width: 2),
-                                  Text(
-                                    '${place.rating}',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textDark,
-                                    ),
-                                  ),
+                                  Text('${place.rating}',
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textDark)),
                                   const SizedBox(width: 8),
-                                  const Icon(
-                                    Icons.location_on_outlined,
-                                    size: 12,
-                                    color: AppColors.textMuted,
-                                  ),
+                                  const Icon(Icons.location_on_outlined,
+                                      size: 12,
+                                      color: AppColors.textMuted),
                                   const SizedBox(width: 2),
-                                  Text(
-                                    '${place.distanceKm} km away',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textMuted,
-                                    ),
-                                  ),
+                                  Text('${place.distanceKm} km away',
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textMuted)),
                                 ],
                               ),
                             ],
