@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "796959561968",
+    "project_id": "moodscape-flutter",
+    "storage_bucket": "moodscape-flutter.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:796959561968:android:44b05e6207082348adca35",
+        "android_client_info": {
+          "package_name": "com.example.moodscape"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAtOrTYu5TnNjljoPA7cxxFtUdqAHVeTw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

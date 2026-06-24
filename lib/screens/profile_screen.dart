@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'settings_screen.dart';
 import 'help_screen.dart';
+import '../services/firestore_service.dart';
+import '../services/user_session.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,8 +14,31 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditing = false;
-  final _nameController = TextEditingController(text: 'Sarah Lim');
-  final _handleController = TextEditingController(text: '@sarahlim_moods');
+  final _nameController = TextEditingController();
+  final _handleController = TextEditingController();
+  int _moodsLogged = 0;
+  int _savedPlaces = 0;
+  int _moodStreak = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final userId = UserSession.userId;
+    if (userId == null) return;
+    final data = await FirestoreService.getUser(userId);
+    if (data == null || !mounted) return;
+    setState(() {
+      _nameController.text = data['name'] ?? '';
+      _handleController.text = data['handle'] ?? '';
+      _moodsLogged = data['moodsLogged'] ?? 0;
+      _savedPlaces = data['savedPlaces'] ?? 0;
+      _moodStreak = data['moodStreak'] ?? 0;
+    });
+  }
 
   @override
   void dispose() {
@@ -22,7 +47,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  Widget _settingsRow({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _settingsRow({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -41,8 +70,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Icon(icon, size: 18, color: AppColors.accent),
                 const SizedBox(width: 12),
-                Expanded(child: Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textDark))),
-                const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: AppColors.textMuted,
+                ),
               ],
             ),
           ),
@@ -61,8 +102,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 28),
               decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [AppColors.accent, Color(0xFF5FD6B4)]),
-                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
+                gradient: LinearGradient(
+                  colors: [AppColors.accent, Color(0xFF5FD6B4)],
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(28),
+                  bottomRight: Radius.circular(28),
+                ),
               ),
               child: Column(
                 children: [
@@ -73,10 +119,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white.withOpacity(0.35),
-                      border: Border.all(color: Colors.white.withOpacity(0.7), width: 3),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.7),
+                        width: 3,
+                      ),
                     ),
-                    child: const Text('S',
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Color(0xFF1A7A56))),
+                    child: const Text(
+                      'S',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A7A56),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   _isEditing
@@ -85,23 +140,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: TextField(
                             controller: _nameController,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
-                            decoration: const InputDecoration(border: InputBorder.none, isDense: true),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
                           ),
                         )
-                      : Text(_nameController.text,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                      : Text(
+                          _nameController.text,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
                   const SizedBox(height: 2),
-                  Text(_handleController.text, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                  Text(
+                    _handleController.text,
+                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  ),
                   const SizedBox(height: 14),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      _ProfileStat(value: '48', label: 'Moods logged'),
+                    children: [
+                      _ProfileStat(
+                        value: '$_moodsLogged',
+                        label: 'Moods logged',
+                      ),
                       SizedBox(width: 24),
-                      _ProfileStat(value: '17', label: 'Saved places'),
+                      _ProfileStat(
+                        value: '$_savedPlaces',
+                        label: 'Saved places',
+                      ),
                       SizedBox(width: 24),
-                      _ProfileStat(value: '5', label: 'Mood streak'),
+                      _ProfileStat(value: '$_moodStreak', label: 'Mood streak'),
                     ],
                   ),
                 ],
@@ -112,14 +189,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () => setState(() => _isEditing = !_isEditing),
-                  icon: Icon(_isEditing ? Icons.check : Icons.edit_outlined, size: 16),
+                  onPressed: () async {
+                    if (_isEditing) {
+                      final userId = UserSession.userId;
+                      if (userId != null) {
+                        await FirestoreService.updateUser(
+                          userId,
+                          _nameController.text.trim(),
+                          _handleController.text.trim(),
+                        );
+                        UserSession.userName = _nameController.text.trim();
+                      }
+                    }
+                    setState(() => _isEditing = !_isEditing);
+                  },
+                  icon: Icon(
+                    _isEditing ? Icons.check : Icons.edit_outlined,
+                    size: 16,
+                  ),
                   label: Text(_isEditing ? 'Save changes' : 'Edit profile'),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(42),
                     side: const BorderSide(color: AppColors.borderMedium),
                     foregroundColor: AppColors.textDark,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
                 ),
               ),
@@ -131,17 +226,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _settingsRow(
                     icon: Icons.settings_outlined,
                     label: 'Settings',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    ),
                   ),
                   _settingsRow(
                     icon: Icons.help_outline,
                     label: 'Help & Support',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HelpScreen()),
+                    ),
                   ),
                   _settingsRow(
                     icon: Icons.logout,
                     label: 'Log out',
-                    onTap: () => Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false),
+                    onTap: () => Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/login',
+                      (route) => false,
+                    ),
                   ),
                 ],
               ),
@@ -164,7 +269,14 @@ class _ProfileStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         Text(label, style: const TextStyle(color: Colors.white70, fontSize: 9)),
       ],
     );

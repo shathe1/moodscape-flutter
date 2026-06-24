@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../services/firestore_service.dart';
+import '../services/user_session.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,11 +28,24 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
-    // TODO: Replace with real authentication logic (API call / Firebase Auth)
-    await Future.delayed(const Duration(seconds: 1));
+    final data = await FirestoreService.getUserByEmail(
+      _emailController.text.trim(),
+    );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
+
+    if (data == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No account found with that email.')),
+      );
+      return;
+    }
+
+    UserSession.userId = data['id'];
+    UserSession.userName = data['name'];
+    UserSession.userEmail = data['email'];
+
     Navigator.pushReplacementNamed(context, '/main');
   }
 
@@ -42,7 +57,10 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       },
       icon: Icon(icon, size: 18, color: AppColors.textDark),
-      label: Text(label, style: const TextStyle(color: AppColors.textDark, fontSize: 13)),
+      label: Text(
+        label,
+        style: const TextStyle(color: AppColors.textDark, fontSize: 13),
+      ),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(46),
         side: const BorderSide(color: AppColors.borderMedium, width: 1.4),
@@ -77,7 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(colors: [AppColors.primary, AppColors.secondary]),
+                      gradient: LinearGradient(
+                        colors: [AppColors.primary, AppColors.secondary],
+                      ),
                     ),
                     child: const Text('🌙', style: TextStyle(fontSize: 32)),
                   ),
@@ -85,7 +105,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Center(
                     child: Text(
                       'MoodScape',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -93,15 +117,23 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Text(
                       'Discover experiences that match your mood.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 32),
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(hintText: 'Email address', prefixIcon: Icon(Icons.mail_outline)),
-                    validator: (value) => (value == null || value.isEmpty) ? 'Please enter your email' : null,
+                    decoration: const InputDecoration(
+                      hintText: 'Email address',
+                      prefixIcon: Icon(Icons.mail_outline),
+                    ),
+                    validator: (value) => (value == null || value.isEmpty)
+                        ? 'Please enter your email'
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -111,11 +143,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'Password',
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
-                    validator: (value) => (value == null || value.isEmpty) ? 'Please enter your password' : null,
+                    validator: (value) => (value == null || value.isEmpty)
+                        ? 'Please enter your password'
+                        : null,
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
@@ -124,25 +164,46 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Text('Sign In'),
                   ),
                   const SizedBox(height: 14),
-                  _socialButton(label: 'Continue with Google', icon: Icons.g_mobiledata),
+                  _socialButton(
+                    label: 'Continue with Google',
+                    icon: Icons.g_mobiledata,
+                  ),
                   const SizedBox(height: 10),
-                  _socialButton(label: 'Continue with Apple', icon: Icons.apple),
+                  _socialButton(
+                    label: 'Continue with Apple',
+                    icon: Icons.apple,
+                  ),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Don't have an account? ",
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                      const Text(
+                        "Don't have an account? ",
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13,
+                        ),
+                      ),
                       GestureDetector(
-                        onTap: () => Navigator.pushReplacementNamed(context, '/register'),
+                        onTap: () => Navigator.pushReplacementNamed(
+                          context,
+                          '/register',
+                        ),
                         child: const Text(
                           'Sign Up',
-                          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
